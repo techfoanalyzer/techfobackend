@@ -3,7 +3,7 @@ import { ErrorHandler } from "../Utils/HandleError.js";
 import bcrypt, { hash } from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import sendEmail from "../utils/sendEmail.js";
+import sendEmail from "../Utils/sendEmail.js";
 import { sendForgetPasswordEmail } from "../Utils/sendForgetPasswordEmail.js";
 
 
