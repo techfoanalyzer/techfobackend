@@ -20,6 +20,10 @@ const DB_connection = async () => {
         console.log("=> Creating new MongoDB connection");
         cached.promise = mongoose.connect(`${process.env.DB_URL}/${DB_Name}`, {
             serverSelectionTimeoutMS: 5000, 
+
+            maxPoolSize: 5,       
+        bufferCommands: false,
+
         }).then((mongooseInstance) => {
             console.log(`MongoDB Connected Successfully: ${mongooseInstance.connection.host}`);
             return mongooseInstance;
