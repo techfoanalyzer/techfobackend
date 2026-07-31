@@ -129,6 +129,7 @@ export const uploadCkeditorImage = async (req, res) => {
 
     let fileBuffer = req.file.buffer;
 
+    // 1. Image Optimization via Sharp
     try {
       if (req.file.size > 1024 * 1024) {
         fileBuffer = await sharp(req.file.buffer)
@@ -137,29 +138,34 @@ export const uploadCkeditorImage = async (req, res) => {
           .toBuffer();
       }
     } catch (sharpError) {
-      fileBuffer = req.file.buffer; 
+      fileBuffer = req.file.buffer;
     }
 
     const cleanFileName = req.file.originalname.split(".")[0].replace(/[^a-zA-Z0-9]/g, "_");
-    
+
+    // 2. ImageKit Upload (Explicit Base64 Buffer String guarantee)
+    // Dynamic Buffer to Base64 String ensures ImageKit SDK reads full binary payload
+    const base64File = fileBuffer.toString("base64");
+
     const result = await ckImagekit.upload({
-      file: fileBuffer,
+      file: base64File, // Buffer format issue bypass via Base64 String
       fileName: `editor_${Date.now()}_${cleanFileName}.jpg`,
       folder: "/ckeditor_uploads",
+      useUniqueFileName: true
     });
 
-    // 🎯 FIX: CKEditor strictly expects 'default' key for image URL
+    // 3. CKEditor Friendly Response Format
     return res.status(200).json({
       url: result.url,
-      default: result.url, // Standard CKEditor SimpleUploadAdapter format
+      default: result.url,
       urls: {
-        default: result.url // Standard CKEditor Custom Adapter format
+        default: result.url
       }
     });
 
   } catch (error) {
     console.error("CKEditor Upload Catch Error:", error);
-    
+
     return res.status(500).json({
       error: {
         message: error.message || "Failed to upload image to server."
