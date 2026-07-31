@@ -16,47 +16,40 @@ export const deleteCkeditorImage = async (req, res) => {
       return res.status(400).json({ error: { message: "Image URL is required." } });
     }
 
-
-    const cleanUrl = imageUrl.split("?")[0]; 
-    const rawFileName = cleanUrl.split("/").pop(); 
+    // 1. Clean URL and Extract Exact Filename
+    const cleanUrl = imageUrl.split("?")[0];
+    const rawFileName = cleanUrl.split("/").pop();
     const fileName = decodeURIComponent(rawFileName);
 
     if (!fileName) {
       return res.status(400).json({ error: { message: "Invalid URL structure." } });
     }
 
-
-    let files = await ckImagekit.listFiles({
+    // 2. Strict Search: Search ONLY in /ckeditor_uploads folder with exact name match
+    const files = await ckImagekit.listFiles({
       path: "/ckeditor_uploads",
-      searchQuery: `name = "${fileName}"`
+      searchQuery: `name = "${fileName}"` // Strict equality only!
     });
 
-  
-    if (!files || files.length === 0) {
-      const baseName = fileName.split(".")[0]; 
-      files = await ckImagekit.listFiles({
-        path: "/ckeditor_uploads",
-        searchQuery: `name : "${baseName}"` 
-      });
-    }
-
-   
+    // 3. Delete File ONLY if Exact Match Found
     if (files && files.length > 0) {
-      const fileId = files[0].fileId;
+      // Extra safety check: verify exact name match in JS array
+      const exactFile = files.find((f) => f.name === fileName);
 
-      await ckImagekit.deleteFile(fileId);
-     
+      if (exactFile) {
+        await ckImagekit.deleteFile(exactFile.fileId);
 
-      return res.status(200).json({
-        success: true,
-        message: "Image deleted successfully from ImageKit."
-      });
+        return res.status(200).json({
+          success: true,
+          message: "Image deleted successfully from ImageKit."
+        });
+      }
     }
 
-
-    return res.status(200).json({ 
-      success: true, 
-      message: "File was already removed or not found on storage." 
+    // Safe Fallback if not found
+    return res.status(200).json({
+      success: true,
+      message: "File was already removed or not found on storage."
     });
 
   } catch (error) {
