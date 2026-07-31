@@ -127,12 +127,12 @@ export const uploadCkeditorImage = async (req, res) => {
       });
     }
 
-    // 1. Sharp Always-Optimize Fix (Chahe size 1MB se kam ho, zaroor compress/resize karega)
+    // 1. Sharp Always-Optimize & Compress
     let optimizedBuffer;
     try {
       optimizedBuffer = await sharp(req.file.buffer)
-        .resize({ width: 1000, withoutEnlargement: true }) // Max width 1000px
-        .jpeg({ quality: 75 }) // 75% quality optimization (Massive size reduction)
+        .resize({ width: 1000, withoutEnlargement: true })
+        .jpeg({ quality: 75 })
         .toBuffer();
     } catch (sharpError) {
       optimizedBuffer = req.file.buffer;
@@ -142,17 +142,15 @@ export const uploadCkeditorImage = async (req, res) => {
       .split(".")[0]
       .replace(/[^a-zA-Z0-9]/g, "_");
 
-    // 2. Data URI Base64 Fix (ImageKit Corrupt File Preview Fix)
-    const base64Image = `data:image/jpeg;base64,${optimizedBuffer.toString("base64")}`;
-
+    // 2. Pure Buffer Upload (No Base64 Prefix Issues - Guaranteed Valid ImageKit CDN URL)
     const result = await ckImagekit.upload({
-      file: base64Image,
+      file: optimizedBuffer, // Pure binary buffer directly
       fileName: `editor_${Date.now()}_${cleanFileName}.jpg`,
       folder: "/ckeditor_uploads",
       useUniqueFileName: true
     });
 
-    // 3. CKEditor Response Format
+    // 3. Response Return
     return res.status(200).json({
       url: result.url,
       default: result.url,
