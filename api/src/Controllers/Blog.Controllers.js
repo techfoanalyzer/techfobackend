@@ -67,11 +67,61 @@ export const deleteCkeditorImage = async (req, res) => {
   }
 };
 
+// export const uploadCkeditorImage = async (req, res) => {
+//   try {
+
+//     if (!req.file) {
+    
+//       return res.status(400).json({
+//         error: { message: "No image file uploaded." }
+//       });
+//     }
+
+//     let fileBuffer = req.file.buffer;
+
+   
+//     try {
+//       if (req.file.size > 1024 * 1024) {
+//         fileBuffer = await sharp(req.file.buffer)
+//           .resize(1000)
+//           .jpeg({ quality: 80 })
+//           .toBuffer();
+//       }
+//     } catch (sharpError) {
+      
+//       fileBuffer = req.file.buffer; 
+//     }
+
+    
+//     const cleanFileName = req.file.originalname.split(".")[0].replace(/[^a-zA-Z0-9]/g, "_");
+    
+//     const result = await ckImagekit.upload({
+//       file: fileBuffer,
+//       fileName: `editor_${Date.now()}_${cleanFileName}.jpg`,
+//       folder: "/ckeditor_uploads",
+//     });
+
+  
+//     return res.status(200).json({
+//       url: result.url
+//     });
+
+//   } catch (error) {
+//     console.error("CKEditor Upload Catch Error:", error);
+    
+   
+//     return res.status(500).json({
+//       error: {
+//         message: error.message || "Failed to upload image to server."
+//       }
+//     });
+//   }
+// };
+
+
 export const uploadCkeditorImage = async (req, res) => {
   try {
-
     if (!req.file) {
-    
       return res.status(400).json({
         error: { message: "No image file uploaded." }
       });
@@ -79,7 +129,6 @@ export const uploadCkeditorImage = async (req, res) => {
 
     let fileBuffer = req.file.buffer;
 
-   
     try {
       if (req.file.size > 1024 * 1024) {
         fileBuffer = await sharp(req.file.buffer)
@@ -88,11 +137,9 @@ export const uploadCkeditorImage = async (req, res) => {
           .toBuffer();
       }
     } catch (sharpError) {
-      
       fileBuffer = req.file.buffer; 
     }
 
-    
     const cleanFileName = req.file.originalname.split(".")[0].replace(/[^a-zA-Z0-9]/g, "_");
     
     const result = await ckImagekit.upload({
@@ -101,15 +148,18 @@ export const uploadCkeditorImage = async (req, res) => {
       folder: "/ckeditor_uploads",
     });
 
-  
+    // 🎯 FIX: CKEditor strictly expects 'default' key for image URL
     return res.status(200).json({
-      url: result.url
+      url: result.url,
+      default: result.url, // Standard CKEditor SimpleUploadAdapter format
+      urls: {
+        default: result.url // Standard CKEditor Custom Adapter format
+      }
     });
 
   } catch (error) {
     console.error("CKEditor Upload Catch Error:", error);
     
-   
     return res.status(500).json({
       error: {
         message: error.message || "Failed to upload image to server."
