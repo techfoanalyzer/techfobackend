@@ -127,34 +127,32 @@ export const uploadCkeditorImage = async (req, res) => {
       });
     }
 
-    let fileBuffer = req.file.buffer;
-
-    // 1. Image Optimization via Sharp
+    // 1. Sharp Always-Optimize Fix (Chahe size 1MB se kam ho, zaroor compress/resize karega)
+    let optimizedBuffer;
     try {
-      if (req.file.size > 1024 * 1024) {
-        fileBuffer = await sharp(req.file.buffer)
-          .resize(1000)
-          .jpeg({ quality: 80 })
-          .toBuffer();
-      }
+      optimizedBuffer = await sharp(req.file.buffer)
+        .resize({ width: 1000, withoutEnlargement: true }) // Max width 1000px
+        .jpeg({ quality: 75 }) // 75% quality optimization (Massive size reduction)
+        .toBuffer();
     } catch (sharpError) {
-      fileBuffer = req.file.buffer;
+      optimizedBuffer = req.file.buffer;
     }
 
-    const cleanFileName = req.file.originalname.split(".")[0].replace(/[^a-zA-Z0-9]/g, "_");
+    const cleanFileName = req.file.originalname
+      .split(".")[0]
+      .replace(/[^a-zA-Z0-9]/g, "_");
 
-    // 2. ImageKit Upload (Explicit Base64 Buffer String guarantee)
-    // Dynamic Buffer to Base64 String ensures ImageKit SDK reads full binary payload
-    const base64File = fileBuffer.toString("base64");
+    // 2. Data URI Base64 Fix (ImageKit Corrupt File Preview Fix)
+    const base64Image = `data:image/jpeg;base64,${optimizedBuffer.toString("base64")}`;
 
     const result = await ckImagekit.upload({
-      file: base64File, // Buffer format issue bypass via Base64 String
+      file: base64Image,
       fileName: `editor_${Date.now()}_${cleanFileName}.jpg`,
       folder: "/ckeditor_uploads",
       useUniqueFileName: true
     });
 
-    // 3. CKEditor Friendly Response Format
+    // 3. CKEditor Response Format
     return res.status(200).json({
       url: result.url,
       default: result.url,
