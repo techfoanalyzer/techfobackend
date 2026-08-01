@@ -7,7 +7,6 @@ import sharp from "sharp";
 import mongoose from "mongoose";
 import { ckImagekit } from "../config/ck.imagekit.js";
 
-
 export const deleteCkeditorImage = async (req, res) => {
   try {
     const { imageUrl } = req.body;
@@ -25,15 +24,14 @@ export const deleteCkeditorImage = async (req, res) => {
       return res.status(400).json({ error: { message: "Invalid URL structure." } });
     }
 
-    // 2. Strict Search: Search ONLY in /ckeditor_uploads folder with exact name match
+    // 2. FIXED: 'ckImagekit' instance used instead of undefined 'imagekit'
     const files = await ckImagekit.listFiles({
       path: "/ckeditor_uploads",
-      searchQuery: `name = "${fileName}"` // Strict equality only!
+      searchQuery: `name = "${fileName}"`
     });
 
     // 3. Delete File ONLY if Exact Match Found
     if (files && files.length > 0) {
-      // Extra safety check: verify exact name match in JS array
       const exactFile = files.find((f) => f.name === fileName);
 
       if (exactFile) {
@@ -46,7 +44,6 @@ export const deleteCkeditorImage = async (req, res) => {
       }
     }
 
-    // Safe Fallback if not found
     return res.status(200).json({
       success: true,
       message: "File was already removed or not found on storage."
@@ -59,6 +56,118 @@ export const deleteCkeditorImage = async (req, res) => {
     });
   }
 };
+
+export const uploadCkeditorImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        error: { message: "No image file uploaded." }
+      });
+    }
+
+    console.log("Ck file received:", req.file);
+
+    // 1. Sharp Optimization (Resize & Compression)
+    let optimizedBuffer;
+    try {
+      optimizedBuffer = await sharp(req.file.buffer)
+        .resize({ width: 1000, withoutEnlargement: true })
+        .jpeg({ quality: 75 })
+        .toBuffer();
+    } catch (sharpError) {
+      console.error("Sharp Error, using fallback buffer:", sharpError);
+      optimizedBuffer = req.file.buffer;
+    }
+
+    const cleanFileName = req.file.originalname
+      .split(".")[0]
+      .replace(/[^a-zA-Z0-9]/g, "_");
+
+    // 2. Base64 conversion
+    const base64File = optimizedBuffer.toString("base64");
+
+    // 3. FIXED: 'ckImagekit.upload' used (Correct Instance Call)
+    const result = await ckImagekit.upload({
+      file: base64File,
+      fileName: `editor_${Date.now()}_${cleanFileName}.jpg`,
+      folder: "/ckeditor_uploads",
+      useUniqueFileName: true,
+      isPrivateFile: false
+    });
+
+    console.log("ImageKit Upload Success URL:", result.url);
+
+    // 4. Return Response to CKEditor
+    return res.status(200).json({
+      url: result.url,
+      default: result.url,
+      urls: {
+        default: result.url
+      }
+    });
+
+  } catch (error) {
+    console.error("CKEditor Upload Catch Error:", error);
+
+    return res.status(500).json({
+      error: {
+        message: error.message || "Failed to upload image to server."
+      }
+    });
+  }
+};
+
+// export const deleteCkeditorImage = async (req, res) => {
+//   try {
+//     const { imageUrl } = req.body;
+
+//     if (!imageUrl) {
+//       return res.status(400).json({ error: { message: "Image URL is required." } });
+//     }
+
+//     // 1. Clean URL and Extract Exact Filename
+//     const cleanUrl = imageUrl.split("?")[0];
+//     const rawFileName = cleanUrl.split("/").pop();
+//     const fileName = decodeURIComponent(rawFileName);
+
+//     if (!fileName) {
+//       return res.status(400).json({ error: { message: "Invalid URL structure." } });
+//     }
+
+//     // 2. Strict Search: Search ONLY in /ckeditor_uploads folder with exact name match
+//     const files = await ckImagekit.listFiles({
+//       path: "/ckeditor_uploads",
+//       searchQuery: `name = "${fileName}"` // Strict equality only!
+//     });
+
+//     // 3. Delete File ONLY if Exact Match Found
+//     if (files && files.length > 0) {
+//       // Extra safety check: verify exact name match in JS array
+//       const exactFile = files.find((f) => f.name === fileName);
+
+//       if (exactFile) {
+//         await ckImagekit.deleteFile(exactFile.fileId);
+
+//         return res.status(200).json({
+//           success: true,
+//           message: "Image deleted successfully from ImageKit."
+//         });
+//       }
+//     }
+
+//     // Safe Fallback if not found
+//     return res.status(200).json({
+//       success: true,
+//       message: "File was already removed or not found on storage."
+//     });
+
+//   } catch (error) {
+//     console.error("CKEditor Image Delete Error:", error);
+//     return res.status(500).json({
+//       error: { message: error.message || "Failed to delete image." }
+//     });
+//   }
+// };
 
 // export const uploadCkeditorImage = async (req, res) => {
 //   try {
@@ -112,56 +221,56 @@ export const deleteCkeditorImage = async (req, res) => {
 // };
 
 
-export const uploadCkeditorImage = async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({
-        error: { message: "No image file uploaded." }
-      });
-    }
+// export const uploadCkeditorImage = async (req, res) => {
+//   try {
+//     if (!req.file) {
+//       return res.status(400).json({
+//         error: { message: "No image file uploaded." }
+//       });
+//     }
 
-    // 1. Sharp Always-Optimize & Compress
-    let optimizedBuffer;
-    try {
-      optimizedBuffer = await sharp(req.file.buffer)
-        .resize({ width: 1000, withoutEnlargement: true })
-        .jpeg({ quality: 75 })
-        .toBuffer();
-    } catch (sharpError) {
-      optimizedBuffer = req.file.buffer;
-    }
+//     // 1. Sharp Always-Optimize & Compress
+//     let optimizedBuffer;
+//     try {
+//       optimizedBuffer = await sharp(req.file.buffer)
+//         .resize({ width: 1000, withoutEnlargement: true })
+//         .jpeg({ quality: 75 })
+//         .toBuffer();
+//     } catch (sharpError) {
+//       optimizedBuffer = req.file.buffer;
+//     }
 
-    const cleanFileName = req.file.originalname
-      .split(".")[0]
-      .replace(/[^a-zA-Z0-9]/g, "_");
+//     const cleanFileName = req.file.originalname
+//       .split(".")[0]
+//       .replace(/[^a-zA-Z0-9]/g, "_");
 
-    // 2. Pure Buffer Upload (No Base64 Prefix Issues - Guaranteed Valid ImageKit CDN URL)
-    const result = await ckImagekit.upload({
-      file: optimizedBuffer, // Pure binary buffer directly
-      fileName: `editor_${Date.now()}_${cleanFileName}.jpg`,
-      folder: "/ckeditor_uploads",
-      useUniqueFileName: true
-    });
+//     // 2. Pure Buffer Upload (No Base64 Prefix Issues - Guaranteed Valid ImageKit CDN URL)
+//     const result = await ckImagekit.upload({
+//       file: optimizedBuffer, // Pure binary buffer directly
+//       fileName: `editor_${Date.now()}_${cleanFileName}.jpg`,
+//       folder: "/ckeditor_uploads",
+//       useUniqueFileName: true
+//     });
 
-    // 3. Response Return
-    return res.status(200).json({
-      url: result.url,
-      default: result.url,
-      urls: {
-        default: result.url
-      }
-    });
+//     // 3. Response Return
+//     return res.status(200).json({
+//       url: result.url,
+//       default: result.url,
+//       urls: {
+//         default: result.url
+//       }
+//     });
 
-  } catch (error) {
-    console.error("CKEditor Upload Catch Error:", error);
+//   } catch (error) {
+//     console.error("CKEditor Upload Catch Error:", error);
 
-    return res.status(500).json({
-      error: {
-        message: error.message || "Failed to upload image to server."
-      }
-    });
-  }
-};
+//     return res.status(500).json({
+//       error: {
+//         message: error.message || "Failed to upload image to server."
+//       }
+//     });
+//   }
+// };
 
 export const addBlog = async (req, res, next) => {
   try {
