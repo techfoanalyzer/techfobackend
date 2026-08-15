@@ -220,7 +220,7 @@ export const VerifyOTP = async (req, res, next) => {
       });
     }
 
-    if (user.otp !== otp || new Date() > user.otpExpires) {
+    if (String(user.otp) !== String(otp) || new Date() > new Date(user.otpExpires)) {
       return res.status(400).json({
         success: false,
         message: "Invalid or expired OTP.",
@@ -232,7 +232,7 @@ export const VerifyOTP = async (req, res, next) => {
     user.otpExpires = undefined;
     await user.save();
 
-    try {
+  
       const emailHtml = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
           <h2 style="color: #333; text-align: center;">Welcome to Techfo Analyzer! 🎉</h2>
@@ -251,15 +251,12 @@ export const VerifyOTP = async (req, res, next) => {
         </div>
       `;
 
-      await registeredsendEmail({
-        to: user.email,
-        subject: "Welcome to Techfo Analyzer! 🎉",
-        html: emailHtml,
-      });
-    } catch (emailError) {
-      console.error("Welcome email failed to send:", emailError);
-    }
-
+      registeredsendEmail({
+  to: user.email,
+  subject: "Welcome to Techfo Analyzer! 🎉",
+  html: emailHtml,
+}).catch((emailErr) => console.error("Welcome email failed in background:", emailErr));
+    
     const token = jwt.sign(
       {
         _id: user._id,
