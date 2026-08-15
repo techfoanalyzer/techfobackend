@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import sendEmail from "../Utils/sendEmail.js";
 import { sendForgetPasswordEmail } from "../Utils/sendForgetPasswordEmail.js";
+import registeredsendEmail from "../Utils/registerEmail.js"
 
 
 
@@ -231,6 +232,34 @@ export const VerifyOTP = async (req, res, next) => {
     user.otpExpires = undefined;
     await user.save();
 
+    try {
+      const emailHtml = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+          <h2 style="color: #333; text-align: center;">Welcome to Techfo Analyzer! 🎉</h2>
+          <p style="font-size: 16px; color: #555;">Hi <strong>${user.name}</strong>,</p>
+          <p style="font-size: 15px; color: #555; line-height: 1.6;">
+            Thank you for verifying your account. We are thrilled to have you on board with <strong>Techfo Analyzer</strong>!
+          </p>
+          <p style="font-size: 15px; color: #555; line-height: 1.6;">
+            Your account is now fully active. Feel free to explore our platform and make the most out of our features.
+          </p>
+          <br />
+          <p style="font-size: 14px; color: #888; text-align: center; border-top: 1px solid #eee; padding-top: 15px;">
+            Best Regards,<br />
+            <strong>Techfo Analyzer Team</strong>
+          </p>
+        </div>
+      `;
+
+      await registeredsendEmail({
+        to: user.email,
+        subject: "Welcome to Techfo Analyzer! 🎉",
+        html: emailHtml,
+      });
+    } catch (emailError) {
+      console.error("Welcome email failed to send:", emailError);
+    }
+
     const token = jwt.sign(
       {
         _id: user._id,
@@ -442,6 +471,9 @@ export const GoogleLogin = async (req, res, next) => {
         expiresIn: process.env.JWT_EXPIRE,
       }
     );
+
+    // console.log("token" , token);
+    
 
     res.cookie("AccessToken", token, {
       httpOnly: true,

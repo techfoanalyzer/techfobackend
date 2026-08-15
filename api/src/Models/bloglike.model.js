@@ -13,7 +13,11 @@ const likeSchema = new mongoose.Schema(
       ref: "Blog",
       required: true,
     },
-
+    categoryid: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      required: true,
+    },
   
 
   },

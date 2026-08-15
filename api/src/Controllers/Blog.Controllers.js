@@ -65,7 +65,7 @@ export const uploadCkeditorImage = async (req, res) => {
       });
     }
 
-    console.log("Ck file received:", req.file);
+    // console.log("Ck file received:", req.file);
 
     // 1. Sharp Optimization (Resize & Compression)
     let optimizedBuffer;
@@ -95,7 +95,7 @@ export const uploadCkeditorImage = async (req, res) => {
       isPrivateFile: false
     });
 
-    console.log("ImageKit Upload Success URL:", result.url);
+    // console.log("ImageKit Upload Success URL:", result.url);
 
     // 4. Return Response to CKEditor
     return res.status(200).json({

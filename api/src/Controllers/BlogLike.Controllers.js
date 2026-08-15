@@ -3,9 +3,9 @@ import BlogLike from "../Models/bloglike.model.js";
 
 export const doLike = async (req, res, next) => {
   try {
-    const { user, blogid } = req.body;
+    const { user, blogid , categoryid} = req.body;
 
-    if (!user || !blogid) {
+    if (!user || !blogid || !categoryid) {
       return res.status(400).json({
         status: false,
         message: "Unable to process like right now. Please try again.",
@@ -14,11 +14,11 @@ export const doLike = async (req, res, next) => {
 
     let isuserLiked = false;
 
-    const existingLike = await BlogLike.findOne({ user, blogid });
+    const existingLike = await BlogLike.findOne({ user, blogid , categoryid });
 
     if (!existingLike) {
 
-      await BlogLike.create({ user, blogid });
+      await BlogLike.create({ user, blogid ,categoryid });
       isuserLiked = true;
     } else {
 
@@ -68,6 +68,34 @@ export const getblogLike = async (req, res, next) => {
     return res.status(500).json({
       status: false,
       message: "Unable to fetch likes right now.",
+    });
+  }
+};
+
+export const getblogsave = async (req, res, next) => {
+  try {
+    const user = req.user;
+    
+    if (!user) {
+      return res.status(401).json({
+        status: false,
+        message: "Unauthorized user",
+      });
+    }
+
+
+    const savedblog = await BlogLike.find({ user: user._id })
+      .populate("blogid").populate('categoryid',"name slug" ).populate('user').sort({ createdAt: -1 }).lean();
+
+    return res.status(200).json({
+      status: true,
+      data: savedblog,
+    });
+  } catch (error) {
+    console.error("Get liked/saved blogs error:", error);
+    return res.status(500).json({
+      status: false,
+      message: "Unable to access saved right now.",
     });
   }
 };
