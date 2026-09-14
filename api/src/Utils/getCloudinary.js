@@ -13,3 +13,5 @@ export const getCloudinaryPublicId = (url) => {
 };
 
 export default cloudinary;
+
+// only some changes
