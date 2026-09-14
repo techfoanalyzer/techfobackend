@@ -13,6 +13,8 @@ import BlogRoute from "./src/Routes/Blog.Routes.js";
 import commentRoute from "./src/Routes/Comment.Route.js";
 import BlogLikeRoute from "./src/Routes/Bloglike.Routes.js";
 import getUserRoute from "./src/Routes/GetUser.Route.js";
+import BookCategoryRoute from "./src/Routes/BookCategory.Routes.js";
+import BookRoute from "./src/Routes/Book.Routes.js";
 
 
 app.set("trust proxy", 1);
@@ -45,5 +47,8 @@ app.use("/api/blog", BlogRoute);
 app.use("/api/comment", commentRoute);
 app.use("/api/blog-like", BlogLikeRoute);
 app.use("/api/get", getUserRoute);
+app.use("/api/book-category", BookCategoryRoute)
+app.use("/api/book", BookRoute);
+
 
 export default app;
